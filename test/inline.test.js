@@ -1,7 +1,6 @@
-const { expect } = require('chai');
-const path = require('path');
-const { render, renderSync } = require('../src');
-const { normalizePath } = require('../src/util');
+import path from 'path';
+import { renderFunctions } from './helpers/testSets';
+import { normalizePath } from '../src/util';
 
 const inlineData = `
   $number1: 123px;
@@ -15,77 +14,77 @@ const inlineNestedData = `
   $number2: 2 * $number1;
 `;
 
-const inlineNestedPath = path.join(__dirname, 'sass');
-const inlineNested1File = path.join(__dirname, 'sass', 'nested', 'inline.scss');
-const inlineNested2File = path.join(__dirname, 'sass', 'nested', 'inline2.scss');
+const inlineNestedPath = path.join(__dirname, 'scss');
+const inlineNested1File = path.join(__dirname, 'scss', 'nested', 'inline.scss');
+const inlineNested2File = path.join(__dirname, 'scss', 'nested', 'inline2.scss');
 
-function verifyInline(rendered, number1Source, number2Source, colorSource) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
-  expect(rendered.vars.global).to.have.property('$number1');
-  expect(rendered.vars.global).to.have.property('$number2');
-  expect(rendered.vars.global).to.have.property('$color');
-
-  expect(rendered.vars.global.$number1.value).to.equal(123);
-  expect(rendered.vars.global.$number1.unit).to.equal('px');
-  expect(rendered.vars.global.$number1.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$number1.sources).to.have.length(1);
-  expect(rendered.vars.global.$number1.sources[0]).to.equal(normalizePath(number1Source));
-  expect(rendered.vars.global.$number1.declarations).to.have.length(1);
-  expect(rendered.vars.global.$number1.declarations[0].expression).to.equal('123px');
-
-  expect(rendered.vars.global.$number2.value).to.equal(246);
-  expect(rendered.vars.global.$number2.unit).to.equal('px');
-  expect(rendered.vars.global.$number2.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$number2.sources).to.have.length(1);
-  expect(rendered.vars.global.$number2.sources[0]).to.equal(normalizePath(number2Source));
-  expect(rendered.vars.global.$number2.declarations).to.have.length(1);
-  expect(rendered.vars.global.$number2.declarations[0].expression).to.equal('2 * $number1');
-
-  expect(rendered.vars.global.$color.value.r).to.equal(255);
-  expect(rendered.vars.global.$color.value.g).to.equal(0);
-  expect(rendered.vars.global.$color.value.b).to.equal(0);
-  expect(rendered.vars.global.$color.value.a).to.equal(1);
-  expect(rendered.vars.global.$color.value.hex).to.equal('#ff0000');
-  expect(rendered.vars.global.$color.type).to.equal('SassColor');
-  expect(rendered.vars.global.$color.sources).to.have.length(1);
-  expect(rendered.vars.global.$color.sources[0]).to.equal(normalizePath(colorSource));
-  expect(rendered.vars.global.$color.declarations).to.have.length(1);
-  expect(rendered.vars.global.$color.declarations[0].expression).to.equal('red');
-}
+const testSets = [
+  ['inline', inlineData, undefined, 'data', 'data', 'data'],
+  [
+    'inline-nested',
+    inlineNestedData,
+    [inlineNestedPath],
+    inlineNested1File,
+    'data',
+    inlineNested2File,
+  ],
+];
 
 describe('inline', () => {
-  describe('sync', () => {
-    it('should extract all variables', () => {
-      const rendered = renderSync({ data: inlineData });
-      verifyInline(rendered, 'data', 'data', 'data');
-    });
-  });
+  describe.each(testSets)(
+    '%s',
+    (_, data, includePaths, number1Source, number2Source, colorSource) => {
+      describe.each(renderFunctions)('%s', (r, renderFunc) => {
+        let rendered;
 
-  describe('async', () => {
-    it('should extract all variables', () => {
-      return render({ data: inlineData }).then((rendered) => {
-        verifyInline(rendered, 'data', 'data', 'data');
+        beforeAll(async () => {
+          rendered = await renderFunc({ data, includePaths });
+        });
+
+        it('should extract $number1', async () => {
+          expect(rendered.vars.global.$number1).toMatchSassNumber(number1Source, {
+            value: 123,
+            unit: 'px',
+            declarations: expect.toMatchDeclarations([
+              {
+                expression: '123px',
+                sourceFile: number1Source,
+              },
+            ]),
+          });
+        });
+
+        it('should extract $number2', async () => {
+          expect(rendered.vars.global.$number2).toMatchSassNumber(number2Source, {
+            value: 246,
+            unit: 'px',
+            declarations: expect.toMatchDeclarations([
+              {
+                expression: '2 * $number1',
+                sourceFile: number2Source,
+              },
+            ]),
+          });
+        });
+
+        it('should extract $color', async () => {
+          expect(rendered.vars.global.$color).toMatchSassColor(colorSource, {
+            value: {
+              r: 255,
+              g: 0,
+              b: 0,
+              a: 1,
+              hex: '#ff0000',
+            },
+            declarations: expect.toMatchDeclarations([
+              {
+                expression: 'red',
+                sourceFile: colorSource,
+              },
+            ]),
+          });
+        });
       });
-    });
-  });
-});
-
-describe('inline-nested', () => {
-  describe('sync', () => {
-    it('should extract all variables', () => {
-      const rendered = renderSync({ data: inlineNestedData, includePaths: [inlineNestedPath] });
-      verifyInline(rendered, inlineNested1File, 'data', inlineNested2File);
-    });
-  });
-
-  describe('async', () => {
-    it('should extract all variables', () => {
-      return render({ data: inlineNestedData, includePaths: [inlineNestedPath] }).then(
-        (rendered) => {
-          verifyInline(rendered, inlineNested1File, 'data', inlineNested2File);
-        }
-      );
-    });
-  });
+    }
+  );
 });

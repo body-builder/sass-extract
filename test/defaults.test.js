@@ -1,56 +1,55 @@
-const { expect } = require('chai');
-const path = require('path');
-const { render, renderSync } = require('../src');
-const { normalizePath } = require('../src/util');
+import path from 'path';
+import { renderFunctions } from './helpers/testSets';
+import { normalizePath } from '../src/util';
 
-const defaultsFile = path.join(__dirname, 'sass', 'defaults.scss');
-
-function verifyDefaults(rendered, sourceFile) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
-  expect(rendered.vars.global).to.have.property('$variable');
-
-  expect(rendered.vars.global.$variable.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$variable.sources).to.have.length(1);
-  expect(rendered.vars.global.$variable.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$variable.declarations).to.have.length(4);
-  expect(rendered.vars.global.$variable.declarations[0].expression).to.equal(`123px`);
-  expect(rendered.vars.global.$variable.declarations[0].flags).to.deep.equal({
-    global: false,
-    default: false,
-  });
-  expect(rendered.vars.global.$variable.declarations[1].expression).to.equal(`456px !default`);
-  expect(rendered.vars.global.$variable.declarations[1].flags).to.deep.equal({
-    global: false,
-    default: true,
-  });
-  expect(rendered.vars.global.$variable.declarations[2].expression).to.equal(`789px`);
-  expect(rendered.vars.global.$variable.declarations[2].flags).to.deep.equal({
-    global: false,
-    default: false,
-  });
-  expect(rendered.vars.global.$variable.declarations[3].expression).to.equal(`100px !default`);
-  expect(rendered.vars.global.$variable.declarations[3].flags).to.deep.equal({
-    global: false,
-    default: true,
-  });
-
-  expect(rendered.vars.global.$variable.value).to.equal(789);
-  expect(rendered.vars.global.$variable.unit).to.equal('px');
-}
+const sourceFile = path.join(__dirname, 'scss', 'defaults.scss');
 
 describe('defaults', () => {
-  describe('sync', () => {
-    it('should extract all variables', () => {
-      const rendered = renderSync({ file: defaultsFile });
-      verifyDefaults(rendered, defaultsFile);
-    });
-  });
+  describe.each(renderFunctions)('%s', (_, renderFunc) => {
+    let rendered;
 
-  describe('async', () => {
-    it('should extract all variables', () => {
-      return render({ file: defaultsFile }).then((rendered) => {
-        verifyDefaults(rendered, defaultsFile);
+    beforeAll(async () => {
+      rendered = await renderFunc({
+        file: sourceFile,
+      });
+    });
+
+    it('has correct shape in general', () => {
+      expect(rendered).toEqual({
+        css: expect.any(Buffer),
+        stats: expect.any(Object),
+        vars: {
+          global: {
+            $variable: expect.any(Object),
+          },
+        },
+      });
+    });
+
+    it('extracts $variable correctly', () => {
+      expect(rendered.vars.global.$variable).toMatchSassNumber(sourceFile, {
+        value: 789,
+        unit: 'px',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: '123px',
+            sourceFile,
+          },
+          {
+            expression: '456px',
+            sourceFile,
+            isDefault: true,
+          },
+          {
+            expression: '789px',
+            sourceFile,
+          },
+          {
+            expression: '100px',
+            sourceFile,
+            isDefault: true,
+          },
+        ]),
       });
     });
   });

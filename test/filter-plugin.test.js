@@ -1,332 +1,250 @@
-const { expect } = require('chai');
-const path = require('path');
-const { renderSync } = require('../src');
+import path from 'path';
+import { pick } from '../src/util';
+import { renderFunctions } from './helpers/testSets';
 
-const PROPS_ALL = { $number1: true, $number2: true, $string: true, $list: true };
+const PROPS_ALL = {
+  $number1: 123,
+  $number2: 456,
+  $string: 'string',
+  $list: [{ value: 1 }, { value: 2 }, { value: 3 }],
+};
 const PROPS_NONE = {};
 
-function verifyFilteredResult(rendered, expectedProps) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
+const filterPluginFile = path.join(__dirname, 'scss', 'filter-plugin.scss');
 
-  if (expectedProps.$number1) {
-    expect(rendered.vars.global).to.have.property('$number1');
-    expect(rendered.vars.global.$number1.value).to.equal(123);
-  } else {
-    expect(rendered.vars.global).to.not.have.property('$number1');
-  }
+// [ filterType, shouldInclude, filterOptions, expectedProps ]
+const testSets = {
+  all: [
+    [
+      'all props',
+      {
+        expectedProps: PROPS_ALL,
+      },
+    ],
+  ],
+  prop: [
+    [
+      'all props',
+      {
+        filterOptions: {
+          only: { props: ['$number1', '$number2', '$string', '$list'] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      'all props',
+      {
+        filterOptions: {
+          only: { props: [] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      'all props',
+      {
+        filterOptions: {
+          except: { props: ['$blahblah'] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      '$number1',
+      {
+        filterOptions: {
+          only: { props: ['$number1'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number1']),
+      },
+    ],
+    [
+      '$number2 and $list',
+      {
+        filterOptions: {
+          only: { props: ['$number2', '$list'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number2', '$list']),
+      },
+    ],
+  ],
+  type: [
+    [
+      'numbers',
+      {
+        filterOptions: {
+          only: { types: ['SassNumber', 'SassString', 'SassList'] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      'list',
+      {
+        filterOptions: {
+          only: { types: [] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          except: { types: ['SassNotThere'] },
+        },
+        expectedProps: PROPS_ALL,
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { types: ['SassNumber'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number1', '$number2']),
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { types: ['SassList'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$list']),
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { types: ['SassNumber', 'SassString'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number2', '$number2', '$string']),
+      },
+    ],
+  ],
+  mix: [
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { props: ['$number1'], types: ['SassNumber'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number1']),
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { types: ['SassNumber'] },
+          except: { props: ['$number1'] },
+        },
+        expectedProps: pick(PROPS_ALL, ['$number2']),
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { types: ['SassNumber'] },
+          except: { types: ['SassNumber'] },
+        },
+        expectedProps: PROPS_NONE,
+      },
+    ],
+    [
+      'numbers and string',
+      {
+        filterOptions: {
+          only: { props: ['$number1'] },
+          except: { props: ['$number1'] },
+        },
+        expectedProps: PROPS_NONE,
+      },
+    ],
+  ],
+};
 
-  if (expectedProps.$number2) {
-    expect(rendered.vars.global).to.have.property('$number2');
-    expect(rendered.vars.global.$number2.value).to.equal(456);
-  } else {
-    expect(rendered.vars.global).to.not.have.property('$number2');
-  }
-
-  if (expectedProps.$string) {
-    expect(rendered.vars.global).to.have.property('$string');
-    expect(rendered.vars.global.$string.value).to.equal('string');
-  } else {
-    expect(rendered.vars.global).to.not.have.property('$string');
-  }
-
-  if (expectedProps.$list) {
-    expect(rendered.vars.global).to.have.property('$list');
-    expect(rendered.vars.global.$list.value).to.have.length(3);
-    expect(rendered.vars.global.$list.value[0].value).to.equal(1);
-    expect(rendered.vars.global.$list.value[1].value).to.equal(2);
-    expect(rendered.vars.global.$list.value[2].value).to.equal(3);
-  } else {
-    expect(rendered.vars.global).to.not.have.property('$list');
-  }
-}
-
-const filterPluginFile = path.join(__dirname, 'sass', 'filter-plugin.scss');
+const filteredByProp = [
+  [
+    'all props',
+    {
+      filterOptions: {
+        only: { props: ['$number1', '$number2', '$string', '$list'] },
+      },
+      expectedProps: PROPS_ALL,
+    },
+  ],
+  [
+    'all props',
+    {
+      filterOptions: {
+        only: { props: [] },
+      },
+      expectedProps: PROPS_ALL,
+    },
+  ],
+  [
+    'all props',
+    {
+      filterOptions: {
+        except: { props: ['$blahblah'] },
+      },
+      expectedProps: PROPS_ALL,
+    },
+  ],
+  [
+    '$number1',
+    {
+      filterOptions: {
+        only: { props: ['$number1'] },
+      },
+      expectedProps: pick(PROPS_ALL, ['$number1']),
+    },
+  ],
+  [
+    '$number2 and $list',
+    {
+      filterOptions: {
+        only: { props: ['$number2', '$list'] },
+      },
+      expectedProps: pick(PROPS_ALL, ['$number2', '$list']),
+    },
+  ],
+];
 
 describe('filter-plugin', () => {
-  describe('all', () => {
-    it('should include all props', () => {
-      const rendered = renderSync({ file: filterPluginFile }, { plugins: ['filter'] });
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-  });
-
-  describe('prop', () => {
-    it('should include all props', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
+  describe.each(renderFunctions)('%s', (renderFuncType, renderFunc) => {
+    describe.each(Object.keys(testSets))('%s', (filterType) => {
+      it.each(testSets[filterType])(
+        'should include %s',
+        async (shouldInclude, { filterOptions, expectedProps }) => {
+          const rendered = await renderFunc(
+            { file: filterPluginFile },
             {
-              plugin: 'filter',
-              options: {
-                only: { props: ['$number1', '$number2', '$string', '$list'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include all props', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { props: [] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include all props', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                except: { props: ['$blahblah'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include $number1', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { props: ['$number1'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number1: true });
-    });
-
-    it('should include $number2 and $list', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { props: ['$number2', '$list'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number2: true, $list: true });
-    });
-  });
-
-  describe('type', () => {
-    it('should include all types', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { types: ['SassNumber', 'SassString', 'SassList'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include all types', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { types: [] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include all types', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                except: { types: ['SassNotThere'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_ALL);
-    });
-
-    it('should include numbers', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { types: ['SassNumber'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number1: true, $number2: true });
-    });
-
-    it('should include list', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { types: ['SassList'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $list: true });
-    });
-
-    it('should include numbers and string', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: { types: ['SassNumber', 'SassString'] },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number1: true, $number2: true, $string: true });
-    });
-  });
-
-  describe('mix', () => {
-    it('should include $number1', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: {
-                  props: ['$number1'],
-                  types: ['SassNumber'],
+              plugins: [
+                {
+                  plugin: 'filter',
+                  options: filterOptions,
                 },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number1: true });
-    });
+              ],
+            }
+          );
 
-    it('should include $number2', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: {
-                  types: ['SassNumber'],
-                },
-                except: {
-                  props: ['$number1'],
-                },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, { $number2: true });
-    });
+          const global = {};
 
-    it('should include nothing', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: {
-                  types: ['SassNumber'],
-                },
-                except: {
-                  types: ['SassNumber'],
-                },
-              },
-            },
-          ],
-        }
-      );
-      verifyFilteredResult(rendered, PROPS_NONE);
-    });
+          Object.entries(expectedProps).forEach(([key, val]) => {
+            global[key] = { value: val };
+          });
 
-    it('should include nothing', () => {
-      const rendered = renderSync(
-        { file: filterPluginFile },
-        {
-          plugins: [
-            {
-              plugin: 'filter',
-              options: {
-                only: {
-                  props: ['$number1'],
-                },
-                except: {
-                  props: ['$number1'],
-                },
-              },
-            },
-          ],
+          expect(rendered).toMatchObject({
+            vars: { global },
+          });
         }
       );
-      verifyFilteredResult(rendered, PROPS_NONE);
     });
   });
 });

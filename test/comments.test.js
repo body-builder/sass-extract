@@ -1,58 +1,74 @@
-const { expect } = require('chai');
-const path = require('path');
-const { render, renderSync } = require('../src');
-const { normalizePath } = require('../src/util');
+import path from 'path';
+import { renderFunctions } from './helpers/testSets';
+import { normalizePath } from '../src/util';
 
-const commentFile = path.join(__dirname, 'sass', 'comments.scss');
-
-function verifyComment(rendered, sourceFile) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
-  expect(rendered.vars.global).to.have.property('$number1');
-  expect(rendered.vars.global).to.have.property('$number2');
-  expect(rendered.vars.global).to.have.property('$color');
-  expect(Object.keys(rendered.vars.global)).to.have.length(3);
-
-  expect(rendered.vars.global.$number1.value).to.equal(100);
-  expect(rendered.vars.global.$number1.unit).to.equal('px');
-  expect(rendered.vars.global.$number1.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$number1.sources).to.have.length(1);
-  expect(rendered.vars.global.$number1.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$number1.declarations).to.have.length(1);
-  expect(rendered.vars.global.$number1.declarations[0].expression).to.equal('100px');
-
-  expect(rendered.vars.global.$number2.value).to.equal(200);
-  expect(rendered.vars.global.$number2.unit).to.equal('px');
-  expect(rendered.vars.global.$number2.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$number2.sources).to.have.length(1);
-  expect(rendered.vars.global.$number2.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$number2.declarations).to.have.length(1);
-  expect(rendered.vars.global.$number2.declarations[0].expression).to.equal('$number1 * 2');
-
-  expect(rendered.vars.global.$color.value.r).to.equal(255);
-  expect(rendered.vars.global.$color.value.g).to.equal(0);
-  expect(rendered.vars.global.$color.value.b).to.equal(0);
-  expect(rendered.vars.global.$color.value.a).to.equal(1);
-  expect(rendered.vars.global.$color.value.hex).to.equal('#ff0000');
-  expect(rendered.vars.global.$color.type).to.equal('SassColor');
-  expect(rendered.vars.global.$color.sources).to.have.length(1);
-  expect(rendered.vars.global.$color.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$color.declarations).to.have.length(1);
-  expect(rendered.vars.global.$color.declarations[0].expression).to.equal('red');
-}
+const sourceFile = path.join(__dirname, 'scss', 'comments.scss');
 
 describe('comments', () => {
-  describe('sync', () => {
-    it('should extract variables not in comments', () => {
-      const rendered = renderSync({ file: commentFile });
-      verifyComment(rendered, commentFile);
-    });
-  });
+  describe.each(renderFunctions)('%s', (renderFuncType, renderFunc) => {
+    let rendered;
 
-  describe('async', () => {
-    it('should extract variables not in comments', () => {
-      return render({ file: commentFile }).then((rendered) => {
-        verifyComment(rendered, commentFile);
+    beforeAll(async () => {
+      rendered = await renderFunc({
+        file: sourceFile,
+      });
+    });
+
+    it('has correct shape in general', () => {
+      expect(rendered).toEqual({
+        css: expect.any(Buffer),
+        stats: expect.any(Object),
+        vars: {
+          global: {
+            $number1: expect.any(Object),
+            $number2: expect.any(Object),
+            $color: expect.any(Object),
+          },
+        },
+      });
+    });
+
+    it('extracts $number1 correctly', () => {
+      expect(rendered.vars.global.$number1).toMatchSassNumber(sourceFile, {
+        value: 100,
+        unit: 'px',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: '100px',
+            sourceFile,
+          },
+        ]),
+      });
+    });
+
+    it('extracts $number2 correctly', () => {
+      expect(rendered.vars.global.$number2).toMatchSassNumber(sourceFile, {
+        value: 200,
+        unit: 'px',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: '$number1 * 2',
+            sourceFile,
+          },
+        ]),
+      });
+    });
+
+    it('extracts $color correctly', () => {
+      expect(rendered.vars.global.$color).toMatchSassColor(sourceFile, {
+        value: {
+          r: 255,
+          g: 0,
+          b: 0,
+          a: 1,
+          hex: '#ff0000',
+        },
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: 'red',
+            sourceFile,
+          },
+        ]),
       });
     });
   });

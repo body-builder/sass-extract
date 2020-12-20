@@ -1,117 +1,120 @@
-const { expect } = require('chai');
-const path = require('path');
-const { render, renderSync } = require('../src');
-const { normalizePath } = require('../src/util');
+import path from 'path';
+import { renderFunctions } from './helpers/testSets';
+import { normalizePath } from '../src/util';
 
-const importedFunctionsFile = path.join(__dirname, 'sass', 'imported-functions.scss');
-const functionsFile = path.join(__dirname, 'sass', 'nested', 'functions.scss');
-
-function verifyImportedFunctions(rendered, sourceFile) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
-  expect(rendered.vars.global).to.have.property('$functionVariable');
-  expect(rendered.vars.global).to.have.property('$defaultedAtFirst');
-  expect(rendered.vars.global).to.have.property('$someDefault');
-  expect(rendered.vars.global).to.have.property('$someOtherDefault');
-  expect(rendered.vars.global).to.have.property('$multipleDefault');
-
-  expect(rendered.vars.global.$functionVariable.type).to.equal('SassString');
-  expect(rendered.vars.global.$functionVariable.sources).to.have.length(1);
-  expect(rendered.vars.global.$functionVariable.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$functionVariable.declarations).to.have.length(2);
-  expect(rendered.vars.global.$functionVariable.declarations[0].expression).to.equal(
-    `'function-variable' !global`
-  );
-  expect(rendered.vars.global.$functionVariable.declarations[0].flags.global).to.equal(true);
-  expect(rendered.vars.global.$functionVariable.declarations[0].flags.default).to.equal(false);
-  expect(rendered.vars.global.$functionVariable.declarations[1].expression).to.equal(
-    `'should-not-happen' !global`
-  );
-  expect(rendered.vars.global.$functionVariable.declarations[1].flags.global).to.equal(true);
-  expect(rendered.vars.global.$functionVariable.declarations[1].flags.default).to.equal(false);
-  expect(rendered.vars.global.$functionVariable.value).to.equal('function-variable');
-
-  expect(rendered.vars.global.$defaultedAtFirst.type).to.equal('SassString');
-  expect(rendered.vars.global.$defaultedAtFirst.sources).to.have.length(1);
-  expect(rendered.vars.global.$defaultedAtFirst.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$defaultedAtFirst.declarations).to.have.length(2);
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[0].expression).to.equal(
-    `'defaulted' !default !global`
-  );
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[0].flags.global).to.equal(true);
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[0].flags.default).to.equal(true);
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[1].expression).to.equal(
-    `'actual' !global`
-  );
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[1].flags.global).to.equal(true);
-  expect(rendered.vars.global.$defaultedAtFirst.declarations[1].flags.default).to.equal(false);
-  expect(rendered.vars.global.$defaultedAtFirst.value).to.equal('actual');
-
-  expect(rendered.vars.global.$someDefault.type).to.equal('SassString');
-  expect(rendered.vars.global.$someDefault.sources).to.have.length(1);
-  expect(rendered.vars.global.$someDefault.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$someDefault.declarations).to.have.length(3);
-  expect(rendered.vars.global.$someDefault.declarations[0].expression).to.equal(`'b' !default`);
-  expect(rendered.vars.global.$someDefault.declarations[0].flags.global).to.equal(false);
-  expect(rendered.vars.global.$someDefault.declarations[0].flags.default).to.equal(true);
-  expect(rendered.vars.global.$someDefault.declarations[1].expression).to.equal(
-    `'a' !default !global`
-  );
-  expect(rendered.vars.global.$someDefault.declarations[1].flags.global).to.equal(true);
-  expect(rendered.vars.global.$someDefault.declarations[1].flags.default).to.equal(true);
-  expect(rendered.vars.global.$someDefault.declarations[2].expression).to.equal(`'c' !global`);
-  expect(rendered.vars.global.$someDefault.declarations[2].flags.global).to.equal(true);
-  expect(rendered.vars.global.$someDefault.declarations[2].flags.default).to.equal(false);
-  expect(rendered.vars.global.$someDefault.value).to.equal('c');
-
-  expect(rendered.vars.global.$someOtherDefault.type).to.equal('SassNumber');
-  expect(rendered.vars.global.$someOtherDefault.sources).to.have.length(1);
-  expect(rendered.vars.global.$someOtherDefault.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$someOtherDefault.declarations).to.have.length(3);
-  expect(rendered.vars.global.$someOtherDefault.declarations[0].expression).to.equal(`3`);
-  expect(rendered.vars.global.$someOtherDefault.declarations[0].flags.global).to.equal(false);
-  expect(rendered.vars.global.$someOtherDefault.declarations[0].flags.default).to.equal(false);
-  expect(rendered.vars.global.$someOtherDefault.declarations[1].expression).to.equal(
-    `1 !default !global`
-  );
-  expect(rendered.vars.global.$someOtherDefault.declarations[1].flags.global).to.equal(true);
-  expect(rendered.vars.global.$someOtherDefault.declarations[1].flags.default).to.equal(true);
-  expect(rendered.vars.global.$someOtherDefault.declarations[2].expression).to.equal(
-    `2 !default !global`
-  );
-  expect(rendered.vars.global.$someOtherDefault.declarations[2].flags.global).to.equal(true);
-  expect(rendered.vars.global.$someOtherDefault.declarations[2].flags.default).to.equal(true);
-  expect(rendered.vars.global.$someOtherDefault.value).to.equal(3);
-
-  expect(rendered.vars.global.$multipleDefault.type).to.equal('SassString');
-  expect(rendered.vars.global.$multipleDefault.sources).to.have.length(1);
-  expect(rendered.vars.global.$multipleDefault.sources[0]).to.equal(normalizePath(sourceFile));
-  expect(rendered.vars.global.$multipleDefault.declarations).to.have.length(2);
-  expect(rendered.vars.global.$multipleDefault.declarations[0].expression).to.equal(
-    `'x' !default !global`
-  );
-  expect(rendered.vars.global.$multipleDefault.declarations[0].flags.global).to.equal(true);
-  expect(rendered.vars.global.$multipleDefault.declarations[0].flags.default).to.equal(true);
-  expect(rendered.vars.global.$multipleDefault.declarations[1].expression).to.equal(
-    `'y' !default !global`
-  );
-  expect(rendered.vars.global.$multipleDefault.declarations[1].flags.global).to.equal(true);
-  expect(rendered.vars.global.$multipleDefault.declarations[1].flags.default).to.equal(true);
-  expect(rendered.vars.global.$multipleDefault.value).to.equal('x');
-}
+const importedFunctionsFile = path.join(__dirname, 'scss', 'imported-functions.scss');
+const functionsFile = path.join(__dirname, 'scss', 'nested', 'functions.scss');
 
 describe('imported-functions', () => {
-  describe('sync', () => {
-    it('should extract all variables', () => {
-      const rendered = renderSync({ file: importedFunctionsFile });
-      verifyImportedFunctions(rendered, importedFunctionsFile, functionsFile);
-    });
-  });
+  describe.each(renderFunctions)('%d', (_, renderFunc) => {
+    let rendered;
 
-  describe('async', () => {
-    it('should extract all variables', () => {
-      return render({ file: importedFunctionsFile }).then((rendered) => {
-        verifyImportedFunctions(rendered, importedFunctionsFile, functionsFile);
+    beforeAll(async () => {
+      rendered = await renderFunc({ file: importedFunctionsFile });
+    });
+
+    it('should extract $functionVariable', () => {
+      expect(rendered.vars.global.$functionVariable).toMatchSassString(importedFunctionsFile, {
+        value: 'function-variable',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: "'function-variable'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+          },
+          {
+            expression: "'should-not-happen'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+          },
+        ]),
+      });
+    });
+
+    it('should extract $defaultedAtFirst', () => {
+      expect(rendered.vars.global.$defaultedAtFirst).toMatchSassString(importedFunctionsFile, {
+        value: 'actual',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: "'defaulted'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+          {
+            expression: "'actual'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+          },
+        ]),
+      });
+    });
+
+    it('should extract $someDefault', () => {
+      expect(rendered.vars.global.$someDefault).toMatchSassString(importedFunctionsFile, {
+        value: 'c',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: "'b'",
+            sourceFile: importedFunctionsFile,
+            isDefault: true,
+          },
+          {
+            expression: "'a'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+          {
+            expression: "'c'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+          },
+        ]),
+      });
+    });
+
+    it('should extract $someOtherDefault', () => {
+      expect(rendered.vars.global.$someOtherDefault).toMatchSassNumber(importedFunctionsFile, {
+        value: 3,
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: '3',
+            sourceFile: importedFunctionsFile,
+          },
+          {
+            expression: '1',
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+          {
+            expression: '2',
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+        ]),
+      });
+    });
+
+    it('should extract $multipleDefault', () => {
+      expect(rendered.vars.global.$multipleDefault).toMatchSassString(importedFunctionsFile, {
+        value: 'x',
+        declarations: expect.toMatchDeclarations([
+          {
+            expression: "'x'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+          {
+            expression: "'y'",
+            sourceFile: importedFunctionsFile,
+            isGlobal: true,
+            isDefault: true,
+          },
+        ]),
       });
     });
   });
