@@ -1,11 +1,7 @@
-const chai = require('chai');
-const chaiSubset = require('chai-subset');
-chai.use(chaiSubset);
-const { expect } = require('chai');
-const path = require('path');
-const { render, renderSync } = require('../src');
+import path from 'path';
+import { renderFunctions } from './helpers/testSets';
 
-const foundationVariablesFile = path.join(__dirname, 'sass', 'foundation.scss');
+const foundationVariablesFile = path.join(__dirname, 'scss', 'foundation.scss');
 
 const EXPECTED_PROPS = [
   '$normalize-vertical-rhythm',
@@ -514,87 +510,45 @@ const EXPECTED_PROPS = [
   '$-zf-bp-value',
 ];
 
-const EXPECTED_SELECTED_VAR_VALUES = [
-  { prop: '$normalize-vertical-rhythm', val: { type: 'SassBoolean', value: true } },
-  { prop: '$h1-font-size', val: { type: 'SassNumber', value: 40, unit: 'px' } },
-  { prop: '$h4-font-size', val: { type: 'SassNumber', value: 20, unit: 'px' } },
-
-  {
-    prop: '$primary-color',
-    val: { type: 'SassColor', value: { r: 0, g: 0, b: 0, a: 1, hex: '#000000' } },
+const EXPECTED_SELECTED_VAR_VALUES = {
+  '$normalize-vertical-rhythm': { type: 'SassBoolean', value: true },
+  '$h1-font-size': { type: 'SassNumber', value: 40, unit: 'px' },
+  '$h4-font-size': { type: 'SassNumber', value: 20, unit: 'px' },
+  '$primary-color': { type: 'SassColor', value: { r: 0, g: 0, b: 0, a: 1, hex: '#000000' } },
+  '$secondary-color': {
+    type: 'SassColor',
+    value: { r: 255, g: 255, b: 255, a: 1, hex: '#ffffff' },
   },
-  {
-    prop: '$secondary-color',
-    val: { type: 'SassColor', value: { r: 255, g: 255, b: 255, a: 1, hex: '#ffffff' } },
+  '$success-color': { type: 'SassColor', value: { r: 0, g: 128, b: 0, a: 1, hex: '#008000' } },
+  '$warning-color': { type: 'SassColor', value: { r: 255, g: 255, b: 0, a: 1, hex: '#ffff00' } },
+  '$alert-color': { type: 'SassColor', value: { r: 255, g: 0, b: 0, a: 1, hex: '#ff0000' } },
+  '$input-background-invalid': {
+    type: 'SassColor',
+    value: { r: 255, g: 0, b: 0, a: 1, hex: '#ff0000' },
   },
-  {
-    prop: '$success-color',
-    val: { type: 'SassColor', value: { r: 0, g: 128, b: 0, a: 1, hex: '#008000' } },
+  '$-zf-size': { type: 'SassString', value: 'large' },
+  '$-zf-zero-breakpoint': { type: 'SassString', value: 'small' },
+  '$-zf-breakpoints-keys': {
+    type: 'SassList',
+    value: [{ value: 'small' }, { value: 'medium' }, { value: 'large' }, { value: 'xlarge' }],
   },
-  {
-    prop: '$warning-color',
-    val: { type: 'SassColor', value: { r: 255, g: 255, b: 0, a: 1, hex: '#ffff00' } },
-  },
-  {
-    prop: '$alert-color',
-    val: { type: 'SassColor', value: { r: 255, g: 0, b: 0, a: 1, hex: '#ff0000' } },
-  },
-
-  {
-    prop: '$input-background-invalid',
-    val: { type: 'SassColor', value: { r: 255, g: 0, b: 0, a: 1, hex: '#ff0000' } },
-  },
-
-  { prop: '$-zf-size', val: { type: 'SassString', value: 'large' } },
-  { prop: '$-zf-zero-breakpoint', val: { type: 'SassString', value: 'small' } },
-  {
-    prop: '$-zf-breakpoints-keys',
-    val: {
-      type: 'SassList',
-      value: [{ value: 'small' }, { value: 'medium' }, { value: 'large' }, { value: 'xlarge' }],
+  '$form-spacing': { type: 'SassNumber', value: 1, unit: 'rem' },
+  '$meter-radius': { type: 'SassNumber', value: 20, unit: 'px' },
+  '$meter-fill-medium': { type: 'SassColor', value: { r: 15, g: 15, b: 15, a: 1, hex: '#0f0f0f' } },
+  '$badge-palette': {
+    type: 'SassMap',
+    value: {
+      primary: { value: { hex: '#000000' } },
+      secondary: { value: { hex: '#ffffff' } },
+      success: { value: { hex: '#008000' } },
+      warning: { value: { hex: '#ffff00' } },
+      alert: { value: { hex: '#ff0000' } },
     },
   },
-
-  { prop: '$form-spacing', val: { type: 'SassNumber', value: 1, unit: 'rem' } },
-
-  { prop: '$meter-radius', val: { type: 'SassNumber', value: 20, unit: 'px' } },
-  {
-    prop: '$meter-fill-medium',
-    val: { type: 'SassColor', value: { r: 15, g: 15, b: 15, a: 1, hex: '#0f0f0f' } },
-  },
-
-  {
-    prop: '$badge-palette',
-    val: {
-      type: 'SassMap',
-      value: {
-        primary: { value: { hex: '#000000' } },
-        secondary: { value: { hex: '#ffffff' } },
-        success: { value: { hex: '#008000' } },
-        warning: { value: { hex: '#ffff00' } },
-        alert: { value: { hex: '#ff0000' } },
-      },
-    },
-  },
-
-  { prop: '$accordion-title-font-size', val: { type: 'SassNumber', value: 0.75, unit: 'rem' } },
-
-  { prop: '$grid-column-count', val: { type: 'SassNumber', value: 20 } },
-
-  { prop: '$form-label-font-weight', val: { type: 'SassString', value: 'bold' } },
-];
-
-function verifyFoundation(rendered) {
-  expect(rendered.vars).to.exist;
-  expect(rendered.vars).to.have.property('global');
-
-  EXPECTED_PROPS.forEach((prop) => expect(rendered.vars.global).to.have.property(prop));
-
-  EXPECTED_SELECTED_VAR_VALUES.forEach(({ prop, val }) => {
-    expect(rendered.vars.global).to.have.property(prop);
-    expect(rendered.vars.global[prop]).to.containSubset(val);
-  });
-}
+  '$accordion-title-font-size': { type: 'SassNumber', value: 0.75, unit: 'rem' },
+  '$grid-column-count': { type: 'SassNumber', value: 20 },
+  '$form-label-font-weight': { type: 'SassString', value: 'bold' },
+};
 
 describe('foundation-variables', function () {
   beforeEach(function () {
@@ -603,17 +557,21 @@ describe('foundation-variables', function () {
     }
   });
 
-  describe('sync', () => {
-    it('should extract all variables', () => {
-      const rendered = renderSync({ file: foundationVariablesFile });
-      verifyFoundation(rendered, foundationVariablesFile);
-    });
-  });
+  describe.each(renderFunctions)('%s', (_, renderFunc) => {
+    it('should extract all variables', async () => {
+      const rendered = await renderFunc({ file: foundationVariablesFile });
+      expect(rendered.vars).toBeDefined();
+      expect(rendered.vars).toHaveProperty('global');
 
-  describe('async', () => {
-    it('should extract all variables', () => {
-      return render({ file: foundationVariablesFile }).then((rendered) => {
-        verifyFoundation(rendered, foundationVariablesFile);
+      const expected = {};
+
+      EXPECTED_PROPS.forEach((val) => {
+        expected[val] = expect.any(Object);
+      });
+
+      expect(rendered.vars.global).toMatchObject({
+        ...expected,
+        ...EXPECTED_SELECTED_VAR_VALUES,
       });
     });
   });

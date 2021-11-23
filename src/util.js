@@ -33,3 +33,14 @@ export function toColorHex(value) {
 
   return colorHex;
 }
+
+/**
+ * Pick a subset of an object
+ */
+export function pick(object, keys) {
+  const returnObj = {};
+  keys.forEach((key) => {
+    returnObj[key] = object[key];
+  });
+  return returnObj;
+}

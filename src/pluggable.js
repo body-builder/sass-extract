@@ -35,7 +35,7 @@ export class Pluggable {
   }
 
   init() {
-    this._plugins.forEach((pluginDescription) => {
+    this._plugins.forEach((pluginDescription = {}) => {
       const plugin = pluginDescription.plugin ? pluginDescription.plugin : pluginDescription;
       const options = pluginDescription.options || {};
 
