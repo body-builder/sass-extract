@@ -12,12 +12,12 @@ function serializeColor(sassColor) {
   const g = Math.round(sassColor.getG());
   const b = Math.round(sassColor.getB());
 
-  if(alpha < 0.999) {
+  if (alpha < 0.999) {
     return `rgba(${r},${g},${b},${alpha})`;
   } else {
     const hex = `#${toColorHex(r)}${toColorHex(g)}${toColorHex(b)}`;
     const parsedColor = parseColor(hex);
-    if(parsedColor.keyword != null) {
+    if (parsedColor.keyword != null) {
       return parsedColor.keyword;
     } else {
       return hex;
@@ -29,53 +29,59 @@ function serializeColor(sassColor) {
  * Transform a SassValue into a serialized string
  */
 function serializeValue(sassValue, isInList) {
-  switch(sassValue.constructor) {
+  switch (sassValue.constructor) {
     case sass.types.String:
-    case sass.types.Boolean:
+    case sass.types.Boolean: {
       return `${sassValue.getValue()}`;
+    }
 
-    case sass.types.Number:
+    case sass.types.Number: {
       return `${sassValue.getValue()}${sassValue.getUnit()}`;
+    }
 
-    case sass.types.Color:
+    case sass.types.Color: {
       return serializeColor(sassValue);
+    }
 
-    case sass.types.Null: 
+    case sass.types.Null: {
       return `null`;
+    }
 
-    case sass.types.List:
+    case sass.types.List: {
       const listLength = sassValue.getLength();
       const listElement = [];
       const hasSeparator = sassValue.getSeparator();
-      for(let i = 0; i < listLength; i++) {
+      for (let i = 0; i < listLength; i++) {
         listElement.push(serialize(sassValue.getValue(i), true));
       }
       // Make sure nested lists are serialized with surrounding parenthesis
-      if(isInList) {
+      if (isInList) {
         return `(${listElement.join(hasSeparator ? ',' : ' ')})`;
       } else {
         return `${listElement.join(hasSeparator ? ',' : ' ')}`;
       }
+    }
 
-    case sass.types.Map:
+    case sass.types.Map: {
       const mapLength = sassValue.getLength();
       const mapValue = {};
-      for(let i = 0; i < mapLength; i++) {
+      for (let i = 0; i < mapLength; i++) {
         const key = serialize(sassValue.getKey(i));
         const value = serialize(sassValue.getValue(i));
         mapValue[key] = value;
       }
-      const serializedMapValues = Object.keys(mapValue).map(key => `${key}: ${mapValue[key]}`);
+      const serializedMapValues = Object.keys(mapValue).map((key) => `${key}: ${mapValue[key]}`);
       return `(${serializedMapValues})`;
+    }
 
     default:
-      throw new Error(`Unsupported sass variable type '${sassValue.constructor.name}'`)
-  };
-};
+      throw new Error(`Unsupported sass variable type '${sassValue.constructor.name}'`);
+  }
+}
 
 /**
  * Create a serialized string from a sassValue object
  */
 export function serialize(sassValue, isInList) {
   return serializeValue(sassValue, isInList);
-};
+}

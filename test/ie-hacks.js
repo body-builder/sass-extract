@@ -2,7 +2,6 @@ const { expect } = require('chai');
 const path = require('path');
 const { render, renderSync } = require('../src');
 const { normalizePath } = require('../src/util');
-const { types } = require('node-sass');
 
 const ieHacksFile = path.join(__dirname, 'sass', 'ie-hacks.scss');
 
@@ -31,8 +30,7 @@ describe('ie-hacks', () => {
 
   describe('async', () => {
     it('should extract all variables', () => {
-      return render({ file: ieHacksFile })
-      .then(rendered => {
+      return render({ file: ieHacksFile }).then((rendered) => {
         verifyIeHacks(rendered, ieHacksFile);
       });
     });
